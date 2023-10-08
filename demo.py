@@ -56,15 +56,17 @@ class Demo(WebsitePage):
         ## extract all paragraphs from soup
         try:
             ### get all class you want and extract all detail
-            content = self.soup.find('div', class_='contentbox')
-            content = str(' '.join([i.get_text() for i in content]))
-            if len(content) == 0:
-                self.log_control(f'No content in page{self.title}')
-                return False
-            self.log_control(content[:25].strip() + '...'+content[-25:].strip()+'| '+str(len(content)))
-            self.extracted_pth = os.path.join(dir, str(self.title+'__'+self.uniqued_id) + '.txt').strip().replace(' ', '')
-            with open( self.extracted_pth, 'w') as f:
-                f.write(content)
+
+            pass
+            # content = self.soup.find('div', class_='contentbox')
+            # content = str(' '.join([i.get_text() for i in content]))
+            # if len(content) == 0:
+            #     self.log_control(f'No content in page{self.title}')
+            #     return False
+            # self.log_control(content[:25].strip() + '...'+content[-25:].strip()+'| '+str(len(content)))
+            # self.extracted_pth = os.path.join(dir, str(self.title+'__'+self.uniqued_id) + '.txt').strip().replace(' ', '')
+            # with open( self.extracted_pth, 'w') as f:
+            #     f.write(content)
             self.extracted = True
         except Exception as e:
             self.log_control(e)
@@ -136,10 +138,10 @@ def main():
     driver = setup()
 
     print('driver init time: ', time.time() - init_time)
-    init_url = 'YOUR_URL'
-    controller = Controller(init_url, '/PATH/to/save'
+    init_url = 'https://zh.wikipedia.org/zh-hk/Wiki'
+    controller = Controller(init_url, 'scrapped/'
                             ,thread_limit=3,driver=driver,page_class=NovelPage
-                            ,loggingfile='PATH/TO/LOGFILE')
+                            ,loggingfile='scrapped/log.txt')
     time.sleep(1)
     #assert False
     init_time = time.time()
