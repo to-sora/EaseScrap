@@ -45,8 +45,8 @@ class Demo(WebsitePage):
         A worker function for multithreading.
     """
 class Demo(WebsitePage):
-    def __init__(self, htm, url, tiitle='' , dir='',loggingfile=''):
-        super().__init__(htm, url, tiitle, dir,loggingfile=loggingfile)
+    def __init__(self, htm, url, tiitle='' , dir='',loggingfile='',id=None):
+        super().__init__(htm, url, tiitle, dir,loggingfile=loggingfile,id=id)
         self.links = []
         
     def extract_text(self, dir):
@@ -141,7 +141,8 @@ def main():
     init_url = 'https://zh.wikipedia.org/zh-hk/Wiki'
     controller = Controller(init_url, 'scrapped/'
                             ,thread_limit=3,driver=driver,page_class=Demo
-                            ,loggingfile='scrapped/log.txt')
+                            ,loggingfile='scrapped/log.txt',
+                            use_db=True,db_path='scrapped/scrapped.db',)
     time.sleep(1)
     #assert False
     init_time = time.time()

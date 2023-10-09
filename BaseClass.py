@@ -159,7 +159,7 @@ class WebsitePage(PageInterface):
     get_state() -> dict:
         Returns a dictionary containing the state of the object.
     """
-    def __init__(self, htm, url, tiitle='', dir='',loggingfile= None):
+    def __init__(self, htm, url, tiitle='', dir='',loggingfile= None,id=None):
         """
         Initializes a new instance of the WebsitePage class.
 
@@ -184,6 +184,7 @@ class WebsitePage(PageInterface):
         self.dir = dir
         self.loggingfile = loggingfile
         self.islogging = True if loggingfile != '' else False
+        self.id = id
         if tiitle == '':
             ## extract title from html bt beautifulsoup
             self.title = self.soup.title.string
@@ -270,16 +271,31 @@ class WebsitePage(PageInterface):
         --------
         dict
             A dictionary containing the state of the object.
+
         """
-        return {
-            "url": self.url,
-            "title": self.title,
-            "extracted": self.extracted,
-            "extracted_pth": self.extracted_pth,
-            "orginal_path": self.orginal_path,
-            "uniqued_id": self.uniqued_id
-        }
-    
+
+        if self.id is None:
+            return {
+                "url": self.url,
+                "title": self.title,
+                "extracted": self.extracted,
+                "extracted_pth": self.extracted_pth,
+                "orginal_path": self.orginal_path,
+                "uniqued_id": self.uniqued_id
+            }
+        else:
+            return {
+                "id": self.id,
+                "url": self.url,
+                "title": self.title,
+                "extracted": self.extracted,
+                "extracted_pth": self.extracted_pth,
+                "orginal_path": self.orginal_path,
+                "uniqued_id": self.uniqued_id
+            }
+        
+
+import sqlite3
 class Controller:
     """
     A class that controls the web scraping process.
@@ -292,6 +308,10 @@ class Controller:
     - driver (WebDriver): The Selenium WebDriver to use for scraping.
     - stop (threading.Event): An event to signal when to stop scraping.
     - page_class (WebsitePage): The class to use for parsing web pages.
+    
+    - db_conn (Connection): The database connection object.
+    - db_cursor (Cursor): The database cursor object.
+
 
     Methods:
     - __init__(self, init_url, dir, thread_limit=5, driver=None, page_class=WebsitePage):
@@ -324,7 +344,7 @@ class Controller:
                 f.write(x+'\n')
         else:
             print(x)
-    def __init__(self, init_url, dir, thread_limit=5, driver=None, page_class=WebsitePage,loggingfile = ''):
+    def __init__(self, init_url, dir, thread_limit=5, driver=None, page_class=WebsitePage,loggingfile = '',use_db=False,db_path=''):
         """
         Initializes the Controller object with the given parameters.
 
@@ -344,6 +364,8 @@ class Controller:
         self.page_class = page_class
         self.loggingfile = loggingfile
         self.islogging = True if loggingfile != '' else False
+        self.use_db = use_db
+        self.db_path = db_path
         ###
         if not os.path.isfile(self.link_csv):
             with open(self.link_csv, 'w') as f:
@@ -360,6 +382,33 @@ class Controller:
                 #print(link_t_be_added)
                 for link in link_t_be_added:
                     f.write(link+', ,F, , , \n')
+        if use_db:
+            ## check if db exit , if not create it and migrate link.csv to db
+            if not os.path.isfile(self.db_path) or os.path.getsize(self.db_path) == 0:
+                self.log_control('create db as cannot find it!')
+                self.db_conn = sqlite3.connect(self.db_path)
+                self.db_cursor = self.db_conn.cursor()
+                sql = '''CREATE TABLE links  (id INTEGER PRIMARY KEY,   url TEXT,   title TEXT,   extracted TEXT,  extracted_pth TEXT,      original_path TEXT,   unique_id TEXT)'''
+                self.db_cursor.execute(sql)
+                with open(self.link_csv, 'r') as f:
+                    reader = csv.DictReader(f)
+                    index = 0
+                    for row in reader:
+                        ## extract from row to insert and migrate to db
+                        index += 1
+                        url = row['url']
+                        title = row['title']
+                        extracted = row['extracted']
+                        extracted_pth = row['extracted_pth']
+                        original_path = row['orginal_path']
+                        unique_id = row['uniqued_id']
+                        sql = '''INSERT INTO links (id, url, title, extracted, extracted_pth, original_path, unique_id)
+                                    VALUES (?,?,?,?,?,?,?)'''
+                        self.db_cursor.execute(sql,(index, url, title, extracted, extracted_pth, original_path, unique_id))
+                        self.log_control('migrate link.csv to db: ', index)
+                    self.db_conn.commit()   
+                    self.db_conn.close()
+    
     import random
 
     def get_unvisited(self, item=10, randomize=False):
@@ -374,19 +423,36 @@ class Controller:
         - unvisited (list): A list of unvisited URLs.
         '''
         try:
-            unvisited = []
-            self.log_control('getting unvisited url , file R')
-            with open(self.link_csv, 'r') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    unvisited.append(dict(row))
-                unvisited = [row['url'] for row in unvisited if row['extracted'] == 'F'  ]
-            ## random sample
-            #self.log_control('unvisited len: ', len(unvisited), 'item: ', unvisited)
-            if randomize and len(unvisited) > item:
-                unvisited = random.sample(unvisited, item)
+            if self.use_db:
+                if randomize:
+                    sql = '''SELECT * FROM links WHERE extracted = 'F' ORDER BY RANDOM() LIMIT ?'''
+                else:
+                    sql = '''SELECT * FROM links WHERE extracted = 'F' LIMIT ?'''
+                self.db_conn = sqlite3.connect(self.db_path)
+                self.db_cursor = self.db_conn.cursor()
+                self.db_cursor.execute(sql,(item,))
+                rows = self.db_cursor.fetchall()
+                ## make unvisited list of dict of id and url
+                unvisited = [{'id':row[0],'url':row[1]} for row in rows]
+                self.log_control('getting unvisited url , db R')
+                self.db_conn.close()
+                
             else:
-                unvisited = unvisited[:item]
+                unvisited = []
+                self.log_control('getting unvisited url , file R')
+                with open(self.link_csv, 'r') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        unvisited.append(dict(row))
+                    unvisited = [row['url'] for row in unvisited if row['extracted'] == 'F'  ]
+                ## random sample
+                #self.log_control('unvisited len: ', len(unvisited), 'item: ', unvisited)
+                if randomize and len(unvisited) > item:
+                    unvisited = random.sample(unvisited, item)
+                else:
+                    unvisited = unvisited[:item]
+                # modify unvisited to list of dict contain url only
+                unvisited = [{'url':i} for i in unvisited]
         except Exception as e:
             self.log_control(e)
             self.log_control('fail to get unvisited url sleep 3 sec')
@@ -402,7 +468,8 @@ class Controller:
             'init_url': self.init_url,
             'dir': self.dir,
             'thread_limit': self.thread_limit,
-            'link_csv': self.link_csv
+            'link_csv': self.link_csv,
+            'db_path': self.db_path
         }
         with open(os.path.join(self.dir, 'controller.pkl'), 'wb') as f:
             pickle.dump(savedict, f)
@@ -420,10 +487,17 @@ class Controller:
         while not self.stop.is_set():
             try:
                 if not self.stop.is_set():
-                    sub_url, html = input_queue.get(timeout=5)
+                    temp = input_queue.get(timeout=5)
+                    if isinstance(temp,dict):
+                        if 'id' in temp:
+                            id = temp['id']
+                        else:
+                            id = None
+                        sub_url = temp['url']
+                        html = temp['html']
                 else:
                     break             
-                thispage = self.page_class(html, sub_url, dir=self.dir,loggingfile=self.loggingfile)
+                thispage = self.page_class(html, sub_url, dir=self.dir,loggingfile=self.loggingfile,id=id)
                 link , state = thispage.worker_func(**wdata)
                 output_queue.put((link, state))
                 self.log_control('extracted: ', state["title"])
@@ -437,7 +511,7 @@ class Controller:
                 time.sleep(1)
         self.log_control('worker thread stop')
 
-    def update_linkcsv(self,output_queue):
+    def update_linkcsv(self,output_queue,user_db=False,db_path=''):
         '''
         The thread worker for updating the link CSV file.
 
@@ -450,27 +524,69 @@ class Controller:
                     link, state = output_queue.get(timeout=5)
                 else:
                     break
-                self.log_control('update link.csv: ,file R')
+                
+                if self.use_db:
+                    # open connection 
+                    db_conn = sqlite3.connect(db_path)
+                    db_cursor = db_conn.cursor()
+                    if 'id' in state:
+                        id = state['id']
+                    else:
+                        id = None
+                    self.log_control('id: ', id)
+                    if id is None:
+                        # get id from db
+                        sql = '''SELECT id FROM links WHERE url = ?'''
+                        db_cursor.execute(sql,(state['url'],))
+                        id = db_cursor.fetchone()[0]
+                    # update db by id
+                    ## record time
+                    start_time = time.time()
+                    sql = '''UPDATE links SET title = ?, extracted = ?, extracted_pth = ?, original_path = ?, unique_id = ? WHERE id = ?'''
+                    db_cursor.execute(sql,(state['title'],state['extracted'],state['extracted_pth'],state['orginal_path'],state['uniqued_id'],id))
+                    db_conn.commit()
+                    self.log_control("linkdb id : ", id, "updated state")
+                    # insert unseen link to db
+                    # get all link from db
+                    sql = '''SELECT url FROM links'''
+                    db_cursor.execute(sql)
+                    rows = db_cursor.fetchall()
+                    link_in_db = [row[0] for row in rows]
+                    # remove all link in link_in_db from link
+                    link = [i for i in link if i not in link_in_db]
+                    start_W_time = time.time()
+                    for i in link:
+                        sql = '''INSERT INTO links (url, title, extracted, extracted_pth, original_path, unique_id)
+                                    VALUES (?,?,?,?,?,?)'''
+                        db_cursor.execute(sql,(i,'', 'F', '', '', ''))
+                        db_conn.commit()
+                    db_conn.close()
+                    self.log_control(f"time used : {time.time() - start_time}")
+                    self.log_control(f"time used : {time.time() - start_W_time}")
+                    self.log_control(f'update link db , insertd link W from  id: {id} len {len(link)}')
+                else:
+
+                    self.log_control('update link.csv: ,file R')
 
                 
-                with open(self.link_csv, 'r') as f:
-                    reader = csv.DictReader(f)
-                    rows = [row for row in reader]
-                for i in range(len(rows)):
-                    if rows[i]['url'] == state['url']:
-                        rows[i] = state
-                        break
-                ### insert unseen link to csv
-                for i in link:
-                    if i not in [row['url'] for row in rows]:
-                        rows.append({'url': i, 'title': '', 'extracted': 'F', 'extracted_pth': '', 'orginal_path': '', 'uniqued_id': ''})
-                self.log_control('update link.csv: ,file W')
-                with open(self.link_csv, 'w') as f:
-                    writer = csv.DictWriter(f, fieldnames=reader.fieldnames)
-                    writer.writeheader()
-                    writer.writerows(rows)
-                self.log_control('update link.csv: ,file W done')
-                output_queue.task_done()
+                    with open(self.link_csv, 'r') as f:
+                        reader = csv.DictReader(f)
+                        rows = [row for row in reader]
+                    for i in range(len(rows)):
+                        if rows[i]['url'] == state['url']:
+                            rows[i] = state
+                            break
+                    ### insert unseen link to csv
+                    for i in link:
+                        if i not in [row['url'] for row in rows]:
+                            rows.append({'url': i, 'title': '', 'extracted': 'F', 'extracted_pth': '', 'orginal_path': '', 'uniqued_id': ''})
+                    self.log_control('update link.csv: ,file W')
+                    with open(self.link_csv, 'w') as f:
+                        writer = csv.DictWriter(f, fieldnames=reader.fieldnames)
+                        writer.writeheader()
+                        writer.writerows(rows)
+                    self.log_control('update link.csv: ,file W done')
+                    output_queue.task_done()
             except queue.Empty:
                 continue
             except Exception as e:
@@ -529,7 +645,7 @@ class Controller:
             self.log_control("getting randomize: ", randomize)
             self.log_control("getting wait_time: ", wait_time)
             
-            thread_list.append(threading.Thread(target=self.update_linkcsv, args=(output_queue,)))
+            thread_list.append(threading.Thread(target=self.update_linkcsv, args=(output_queue,self.use_db,self.db_path)))
             for i in thread_list:
                 i.start()
             fail =0
@@ -545,23 +661,29 @@ class Controller:
                     return False
                 else:
                     self.log_control("last unvisited: ", unvisited[-1])
-                for url in unvisited:
+                for i in unvisited:
                     try:
+                        url = i['url']
+                        if 'id' in i:
+                            id = i['id']
+                        else:
+                            id = None
                         if use_driver:
-
-                            self.log_control('get url: ', url)
+                            ## use selenium
+                            self.log_control('driver getting url: ', url)
                             self.driver.get(url)
-                            self.log_control('geted url: ', url)
+                            self.log_control('driver geted url: ', url)
 
 
                             # add to input queue
                             html = self.driver.page_source
                         else: 
                             ## use requests
-                            self.log_control('get url: ', url)
+                            self.log_control('request get url: ', url)
                             html = requests.get(url).text
                             time.sleep(wait_time)
-                        input_queue.put((url, html))
+                        passin = {'url': url, 'html': html,'id':id}
+                        input_queue.put(passin)
                         if wait_time == 0:
                             time.sleep(random.random())
                         else:
