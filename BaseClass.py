@@ -16,20 +16,14 @@ import threading
 import queue
 import tqdm
 import time
-from selenium import webdriver
-from selenium.webdriver.firefox.options import Options
-from selenium.webdriver.firefox.service import Service
-import re
-import hashlib
-import os
-from bs4 import BeautifulSoup
-
-
 def setup():
     '''
     return selenium fire fox headless
     
     '''
+    from selenium import webdriver
+    from selenium.webdriver.firefox.options import Options
+    from selenium.webdriver.firefox.service import Service
 
     options = Options()
     options.headless = True
@@ -39,6 +33,7 @@ def setup():
     driver = webdriver.Firefox(options=options)
     return driver
 
+import re
 def extract_chinese(inputstring):
 
     '''
@@ -122,7 +117,9 @@ class PageInterface(ABC):
         pass
     
 
-
+import hashlib
+import os
+from bs4 import BeautifulSoup
 
 class WebsitePage(PageInterface):
     """
@@ -190,6 +187,12 @@ class WebsitePage(PageInterface):
         if tiitle == '':
             ## extract title from html bt beautifulsoup
             self.title = self.soup.title.string
+            ## remove all html / txt / jpg in title
+            self.title = self.title.replace('.html','').replace('.txt','').replace('.jpg','')
+            # remove space /n all space eement
+            self.title = self.title.strip()
+            self.title = self.title.replace('\n','')
+            self.title = self.title.replace('\t','')
             ## remove invalid char for file name in Ubuntu and Windows
             self.title = re.sub(r'[\\/:*?"<>|]', '', self.title)
         else:
@@ -344,7 +347,7 @@ class Controller:
         ###
         if not os.path.isfile(self.link_csv):
             with open(self.link_csv, 'w') as f:
-                log_control('create link.csv as cannot find it!')
+                self.log_control('create link.csv as cannot find it!')
                 f.write('url,title,extracted,extracted_pth,orginal_path,uniqued_id\n')
                 ### visit init url
                 driver.get(self.init_url)
@@ -372,11 +375,12 @@ class Controller:
         '''
         try:
             unvisited = []
+            self.log_control('getting unvisited url , file R')
             with open(self.link_csv, 'r') as f:
                 reader = csv.DictReader(f)
                 for row in reader:
                     unvisited.append(dict(row))
-                unvisited = [row['url'] for row in unvisited if row['extracted'] == 'F' or row['extracted'] == 'False' ]
+                unvisited = [row['url'] for row in unvisited if row['extracted'] == 'F'  ]
             ## random sample
             #self.log_control('unvisited len: ', len(unvisited), 'item: ', unvisited)
             if randomize and len(unvisited) > item:
@@ -446,6 +450,8 @@ class Controller:
                     link, state = output_queue.get(timeout=5)
                 else:
                     break
+                self.log_control('update link.csv: ,file R')
+
                 
                 with open(self.link_csv, 'r') as f:
                     reader = csv.DictReader(f)
@@ -458,10 +464,12 @@ class Controller:
                 for i in link:
                     if i not in [row['url'] for row in rows]:
                         rows.append({'url': i, 'title': '', 'extracted': 'F', 'extracted_pth': '', 'orginal_path': '', 'uniqued_id': ''})
+                self.log_control('update link.csv: ,file W')
                 with open(self.link_csv, 'w') as f:
                     writer = csv.DictWriter(f, fieldnames=reader.fieldnames)
                     writer.writeheader()
                     writer.writerows(rows)
+                self.log_control('update link.csv: ,file W done')
                 output_queue.task_done()
             except queue.Empty:
                 continue
@@ -491,6 +499,8 @@ class Controller:
                     fp = os.path.join(dirpath, f)
                     with open(fp, 'r') as f:
                         total_len += len(f.read())
+        self.log_control('total size: ', total_size)
+        self.log_control('total len: ', total_len)
         return total_size, total_len
 
     def loop(self, no_target=2, batch=10, randomize=False, data={},wait_time=0,use_driver=True):
@@ -514,12 +524,27 @@ class Controller:
 
             
             # start update link.csv thread
+            self.log_control("getting no_target: ", no_target)
+            self.log_control("getting batch: ", batch)
+            self.log_control("getting randomize: ", randomize)
+            self.log_control("getting wait_time: ", wait_time)
             
             thread_list.append(threading.Thread(target=self.update_linkcsv, args=(output_queue,)))
             for i in thread_list:
                 i.start()
+            fail =0
             for i in range(no_target):
                 unvisited = self.get_unvisited(batch, randomize)
+                self.log_control("getting round: ", i)
+                self.log_control("getting unvisited: ", len(unvisited))
+                if len(unvisited) == 0:
+                    fail +=1
+                    time.sleep(60)
+                if fail > 3:
+                    self.log_control("fail to get unvisited url 3 times")
+                    return False
+                else:
+                    self.log_control("last unvisited: ", unvisited[-1])
                 for url in unvisited:
                     try:
                         if use_driver:

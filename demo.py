@@ -140,7 +140,7 @@ def main():
     print('driver init time: ', time.time() - init_time)
     init_url = 'https://zh.wikipedia.org/zh-hk/Wiki'
     controller = Controller(init_url, 'scrapped/'
-                            ,thread_limit=3,driver=driver,page_class=NovelPage
+                            ,thread_limit=3,driver=driver,page_class=Demo
                             ,loggingfile='scrapped/log.txt')
     time.sleep(1)
     #assert False
