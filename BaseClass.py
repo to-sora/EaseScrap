@@ -405,10 +405,20 @@ class Controller:
                         sql = '''INSERT INTO links (id, url, title, extracted, extracted_pth, original_path, unique_id)
                                     VALUES (?,?,?,?,?,?,?)'''
                         self.db_cursor.execute(sql,(index, url, title, extracted, extracted_pth, original_path, unique_id))
-                        self.log_control('migrate link.csv to db: ', index)
+                        #self.log_control('migrate link.csv to db: ', index)
                     self.db_conn.commit()   
-                    self.db_conn.close()
-    
+                self.db_conn.execute('PRAGMA journal_mode = WAL')
+                self.db_conn.commit()
+
+                # Increase page size
+                self.db_conn.execute('PRAGMA page_size = 8192')
+                self.db_conn.commit()
+
+                # Enable memory-mapped I/O
+                self.db_conn.execute('PRAGMA mmap_size = 268435456')  # 256 MB
+                self.db_conn.commit()
+                self.db_conn.close()
+
     import random
 
     def get_unvisited(self, item=10, randomize=False):
@@ -501,7 +511,6 @@ class Controller:
                 link , state = thispage.worker_func(**wdata)
                 output_queue.put((link, state))
                 self.log_control('extracted: ', state["title"])
-                input_queue.task_done()
             except queue.Empty:
                 continue
             except Exception as e:
@@ -509,6 +518,8 @@ class Controller:
                 self.log_control('fail to extract text')
                 #input_queue.task_done()
                 time.sleep(1)
+            input_queue.task_done()
+            
         self.log_control('worker thread stop')
 
     def update_linkcsv(self,output_queue,user_db=False,db_path=''):
@@ -518,6 +529,11 @@ class Controller:
         Parameters:
         - output_queue (queue.Queue): The output queue for the worker.
         '''
+        total_line = 0
+        total_write_time = 0
+        if user_db:
+            db_conn = sqlite3.connect(db_path)
+            db_cursor = db_conn.cursor()
         while not self.stop.is_set():
             try:
                 if not self.stop.is_set():
@@ -527,8 +543,8 @@ class Controller:
                 
                 if self.use_db:
                     # open connection 
-                    db_conn = sqlite3.connect(db_path)
-                    db_cursor = db_conn.cursor()
+                    start_time = time.time()
+
                     if 'id' in state:
                         id = state['id']
                     else:
@@ -541,7 +557,6 @@ class Controller:
                         id = db_cursor.fetchone()[0]
                     # update db by id
                     ## record time
-                    start_time = time.time()
                     sql = '''UPDATE links SET title = ?, extracted = ?, extracted_pth = ?, original_path = ?, unique_id = ? WHERE id = ?'''
                     db_cursor.execute(sql,(state['title'],state['extracted'],state['extracted_pth'],state['orginal_path'],state['uniqued_id'],id))
                     db_conn.commit()
@@ -555,15 +570,20 @@ class Controller:
                     # remove all link in link_in_db from link
                     link = [i for i in link if i not in link_in_db]
                     start_W_time = time.time()
+                    values = []
                     for i in link:
-                        sql = '''INSERT INTO links (url, title, extracted, extracted_pth, original_path, unique_id)
-                                    VALUES (?,?,?,?,?,?)'''
-                        db_cursor.execute(sql,(i,'', 'F', '', '', ''))
-                        db_conn.commit()
-                    db_conn.close()
-                    self.log_control(f"time used : {time.time() - start_time}")
-                    self.log_control(f"time used : {time.time() - start_W_time}")
+                        values.append((i,'', 'F', '', '', ''))
+                    sql = '''INSERT INTO links (url, title, extracted, extracted_pth, original_path, unique_id)
+                                VALUES (?,?,?,?,?,?)'''
+                    db_cursor.executemany(sql, values)
+                    db_conn.commit()
+                    finish_time = time.time()
+                    self.log_control(f"time used : {finish_time - start_time}")
+                    self.log_control(f"time used : {finish_time - start_W_time}")
+                    self.log_control('time used per link: ', (finish_time - start_W_time)/len(link))
                     self.log_control(f'update link db , insertd link W from  id: {id} len {len(link)}')
+                    total_line += len(link)
+                    total_write_time += (finish_time - start_W_time)
                 else:
 
                     self.log_control('update link.csv: ,file R')
@@ -586,14 +606,18 @@ class Controller:
                         writer.writeheader()
                         writer.writerows(rows)
                     self.log_control('update link.csv: ,file W done')
-                    output_queue.task_done()
             except queue.Empty:
                 continue
             except Exception as e:
                 self.log_control(e)
                 self.log_control('fail to update link.csv in worker2')
+            output_queue.task_done()
         self.log_control('update_linkcsv thread stop')
-
+        if user_db:
+            db_conn.close()
+        self.log_control('total line: ', total_line)
+        self.log_control('total write time: ', total_write_time)
+        self.log_control('time per line: ', total_write_time/total_line)
     def analy_dir(self):
         '''
         Analyzes the total size and length of text files in the directory.

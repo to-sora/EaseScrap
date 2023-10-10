@@ -150,13 +150,13 @@ def main():
     if usearg:
         print('v1: ', v1)
         print('v2: ', v2)
-        controller.loop(int(v1),int(v2),data={'save_html':False},wait_time=2,randomize=True)
+        controller.loop(int(v1),int(v2),data={'save_html':False},wait_time=2,randomize=False)
     else:
         controller.loop(4,10,data={'save_html':True},wait_time=1,randomize=False)
-    print('loop time: ', time.time() - init_time)
-    toatl_size, total_len = controller.analy_dir()
-    print('total size: ', toatl_size)
-    print('total len: ', total_len)
+    # print('loop time: ', time.time() - init_time)
+    # toatl_size, total_len = controller.analy_dir()
+    # print('total size: ', toatl_size)
+    # print('total len: ', total_len)
 
 
     driver.close()

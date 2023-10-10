@@ -2,3 +2,4 @@ scrapped
 *.log
 __pycache__
 SQLtest.py
+vis.txt
