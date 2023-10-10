@@ -98,6 +98,7 @@ class Demo(WebsitePage):
             # remove all links not start with http 
             links = [i for i in links if i.startswith('http')]
             # remocelen > 86
+            link = [i for i in links if 'wiki'  in i]
             if dir:
                 self.link_pth = os.path.join(dir, str(self.title+'__'+self.uniqued_id) + '.link').strip()
                 with open(self.link_pth, 'w') as f:
@@ -150,7 +151,7 @@ def main():
     if usearg:
         print('v1: ', v1)
         print('v2: ', v2)
-        controller.loop(int(v1),int(v2),data={'save_html':False},wait_time=2,randomize=False)
+        controller.loop(int(v1),int(v2),data={'save_html':False},wait_time=1,randomize=False)
     else:
         controller.loop(4,10,data={'save_html':True},wait_time=1,randomize=False)
     # print('loop time: ', time.time() - init_time)
