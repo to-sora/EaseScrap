@@ -16,7 +16,7 @@ This project is a demo of how to use a Python script to do webscrap with  fault 
 
 ## Usage
 
-1. Modify the path in `script.py` to point to the correct file location of .db .log 
+1. Modify the path in `script` to point to the correct file location of .db .log 
 2. Run the script using `python demo.py` with or without args
 3. The output will be saved in dir and log and db 
 
@@ -30,5 +30,5 @@ This project is a demo of how to use a Python script to do webscrap with  fault 
 
 
 ## Working in batch
-Make use of script in scrip directory to run job in background and in batch by nohup
+Make use of script in scrip directory to run job in background and in batch by `nohup`
 
