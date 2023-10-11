@@ -55,6 +55,7 @@ class Demo(WebsitePage):
         '''
         ## extract all paragraphs from soup
         try:
+            # TODO: change this to your own method to extract text
             ### get all class you want and extract all detail
 
             pass
@@ -93,6 +94,14 @@ class Demo(WebsitePage):
                 links.append(href)
             # remove None
             links = [i for i in links if i]
+
+
+            # TODO: change this to your own method to fiilter out links you don't want
+            # e.g. remove links that don't start with 'http' 
+            # e.g. remove links that don't contain 'wiki'
+            # e.g. remove links that contain 'login'
+
+            
             # unique
             links = list(set(links))
             # remove all links not start with http 
@@ -139,11 +148,15 @@ def main():
     driver = setup()
 
     print('driver init time: ', time.time() - init_time)
+
+    # TODO: change this to your own url
     init_url = 'https://zh.wikipedia.org/zh-hk/Wiki'
-    controller = Controller(init_url, 'scrapped/'
+
+
+    controller = Controller(init_url, 'scrapped/'                # TODO: <--- change this to your own directory
                             ,thread_limit=3,driver=driver,page_class=Demo
-                            ,loggingfile='scrapped/log.txt',
-                            use_db=True,db_path='scrapped/scrapped.db',)
+                            ,loggingfile='scrapped/log.txt',     # <--- change this to your own directory
+                            use_db=True,db_path='scrapped/scrapped.db')  # <--- change this to your own directory
     time.sleep(1)
     #assert False
     init_time = time.time()
