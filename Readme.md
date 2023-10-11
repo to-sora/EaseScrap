@@ -1,6 +1,6 @@
 # EaseScrap
 
-This project is a demo of how to use a Python script to do webscrap which  toleranc.
+This project is a demo of how to use a Python script to do webscrap with  fault tolerance.
 
 ## Installation
 
