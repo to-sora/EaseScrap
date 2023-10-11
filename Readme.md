@@ -31,5 +31,5 @@ Current there is no package provide, user can start from demo.py
 
 
 ## Working in batch
-Make use of script in scrip directory to run job in background and in batch by `nohup`
+Make use of .sh in script directory to run job in background and in batch by `nohup`
 
