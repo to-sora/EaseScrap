@@ -1,4 +1,7 @@
 # EaseScrap
+The web scraping process will begin in the "initurl" . It will retrieve all URLs from the web, filter out any unwanted URLs, and store them in a database. Then, a batch of random URLs will be selected from the database for further scraping. To handle this process efficiently, multiple threads will be utilized.
+
+There are two classes involved in this process: "Controller" and "Demo". The "Controller" class is responsible for managing the threading operations and db manage, while the "Demo" class handles the extraction of text and the filtering of links from the scraped data which is ina function called by "Controller"
 
 This project is a demo of how to use a Python script to do webscrap with  fault tolerance.
 
