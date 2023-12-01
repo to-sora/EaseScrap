@@ -16,6 +16,7 @@ import threading
 import queue
 import tqdm
 import time
+csv.field_size_limit(131072*2)  # Set the field size limit to a larger value, e.g., 1 MB (1048576 bytes)
 def setup():
     '''
     return selenium fire fox headless
@@ -393,6 +394,8 @@ class Controller:
                 with open(self.link_csv, 'r') as f:
                     reader = csv.DictReader(f)
                     index = 0
+                    #start_time = time.time()
+                    self.log_control('migrate link.csv to db: ')
                     for row in reader:
                         ## extract from row to insert and migrate to db
                         index += 1
@@ -406,6 +409,8 @@ class Controller:
                                     VALUES (?,?,?,?,?,?,?)'''
                         self.db_cursor.execute(sql,(index, url, title, extracted, extracted_pth, original_path, unique_id))
                         #self.log_control('migrate link.csv to db: ', index)
+                    self.log_control('migrate link.csv to db: ', index)
+                    #self.log_control('migrate link.csv to db time: ', time.time() - start_time)
                     self.db_conn.commit()   
                 self.db_conn.execute('PRAGMA journal_mode = WAL')
                 self.db_conn.commit()
@@ -421,7 +426,7 @@ class Controller:
 
     import random
 
-    def get_unvisited(self, item=10, randomize=False):
+    def get_unvisited(self, item=10, randomize=False,tosort = False):
         '''
         Returns a list of unvisited URLs.
 
@@ -437,7 +442,10 @@ class Controller:
                 if randomize:
                     sql = '''SELECT * FROM links WHERE extracted = 'F' ORDER BY RANDOM() LIMIT ?'''
                 else:
-                    sql = '''SELECT * FROM links WHERE extracted = 'F' LIMIT ?'''
+                    if tosort:
+                        sql = '''SELECT * FROM links WHERE extracted = 'F' ORDER BY url LIMIT ?'''
+                    else:
+                        sql = '''SELECT * FROM links WHERE extracted = 'F' LIMIT ?'''
                 self.db_conn = sqlite3.connect(self.db_path)
                 self.db_cursor = self.db_conn.cursor()
                 self.db_cursor.execute(sql,(item,))
@@ -460,6 +468,8 @@ class Controller:
                 if randomize and len(unvisited) > item:
                     unvisited = random.sample(unvisited, item)
                 else:
+                    if tosort:
+                        unvisited = sorted(unvisited)
                     unvisited = unvisited[:item]
                 # modify unvisited to list of dict contain url only
                 unvisited = [{'url':i} for i in unvisited]
@@ -543,7 +553,7 @@ class Controller:
                 
                 if self.use_db:
                     # open connection 
-                    start_time = time.time()
+                    #start_time = time.time()
 
                     if 'id' in state:
                         id = state['id']
@@ -569,7 +579,7 @@ class Controller:
                     link_in_db = [row[0] for row in rows]
                     # remove all link in link_in_db from link
                     link = [i for i in link if i not in link_in_db]
-                    start_W_time = time.time()
+                    #start_W_time = time.time()
                     values = []
                     for i in link:
                         values.append((i,'', 'F', '', '', ''))
@@ -577,13 +587,16 @@ class Controller:
                                 VALUES (?,?,?,?,?,?)'''
                     db_cursor.executemany(sql, values)
                     db_conn.commit()
-                    finish_time = time.time()
-                    self.log_control(f"time used : {finish_time - start_time}")
-                    self.log_control(f"time used : {finish_time - start_W_time}")
-                    self.log_control('time used per link: ', (finish_time - start_W_time)/len(link))
+                    #finish_time = time.time()
+                    #self.log_control(f"time used : {finish_time - start_time}")
+                    #self.log_control(f"time used : {finish_time - start_W_time}")
+                    # if len(link) != 0:
+                    #     self.log_control('time used per link: ', (finish_time - start_W_time)/len(link))
+                    # else:
+                    #     self.log_control('time used per link: ', 0)
                     self.log_control(f'update link db , insertd link W from  id: {id} len {len(link)}')
                     total_line += len(link)
-                    total_write_time += (finish_time - start_W_time)
+                    #total_write_time += (finish_time - start_W_time)
                 else:
 
                     self.log_control('update link.csv: ,file R')
@@ -616,8 +629,11 @@ class Controller:
         if user_db:
             db_conn.close()
         self.log_control('total line: ', total_line)
-        self.log_control('total write time: ', total_write_time)
-        self.log_control('time per line: ', total_write_time/total_line)
+        #self.log_control('total write time: ', total_write_time)
+        # if total_line != 0:
+        #     self.log_control('time per line: ', total_write_time/total_line)
+        # else:
+        #     self.log_control('total line is 0')
     def analy_dir(self):
         '''
         Analyzes the total size and length of text files in the directory.
@@ -643,7 +659,8 @@ class Controller:
         self.log_control('total len: ', total_len)
         return total_size, total_len
 
-    def loop(self, no_target=2, batch=10, randomize=False, data={},wait_time=0,use_driver=True):
+    def loop(self, no_target=2, batch=10, randomize=False, data={},wait_time=0,
+             use_driver=True,target_url=None,tosort=False):
         '''
         The main loop for the Controller object.
 
@@ -653,6 +670,16 @@ class Controller:
         - randomize (bool): Whether to scrape URLs in random order.
         - data (dict): The data to pass to the worker function.
         '''
+        ## pring gouped count of extrcted
+    
+        group_sql = '''SELECT extracted, COUNT(*) FROM links GROUP BY extracted'''
+        if self.use_db:
+            self.db_conn = sqlite3.connect(self.db_path)
+            self.db_cursor = self.db_conn.cursor()
+            self.db_cursor.execute(group_sql)
+            orginal_rows = self.db_cursor.fetchall()
+            self.db_conn.close()
+        
         try:
 
             input_queue = queue.Queue()
@@ -673,8 +700,38 @@ class Controller:
             for i in thread_list:
                 i.start()
             fail =0
+            if target_url is not None:
+                for url in target_url:
+                    print('target url: ', url)
+                    try:
+                        id = -1
+                        if use_driver:
+                            ## use selenium
+                            self.log_control('driver getting url: ', url)
+                            self.driver.get(url)
+                            self.log_control('driver geted url: ', url)
+
+
+                            # add to input queue
+                            html = self.driver.page_source
+                        else: 
+                            ## use requests
+                            self.log_control('request get url: ', url)
+                            html = requests.get(url).text
+                            time.sleep(wait_time)
+                        passin = {'url': url, 'html': html,'id':id}
+                        input_queue.put(passin)
+                        if wait_time == 0:
+                            time.sleep(random.random())
+                        else:
+                            time.sleep(wait_time+random.random()*wait_time/3)
+                    except Exception as e:
+                        self.log_control(e)
+                        self.log_control('fail to get url: ', url)
+                        continue
+
             for i in range(no_target):
-                unvisited = self.get_unvisited(batch, randomize)
+                unvisited = self.get_unvisited(batch, randomize,tosort)
                 self.log_control("getting round: ", i)
                 self.log_control("getting unvisited: ", len(unvisited))
                 if len(unvisited) == 0:
@@ -723,6 +780,14 @@ class Controller:
             self.log_control('input_queue join')
             self.log_control('output_queue join')
             self.stop.set()
+            if self.use_db:
+                self.db_conn = sqlite3.connect(self.db_path)
+                self.db_cursor = self.db_conn.cursor()
+                self.db_cursor.execute(group_sql)
+                rows = self.db_cursor.fetchall()
+                self.db_conn.close()
+                self.log_control('grouped count of extracted in old db: ', orginal_rows)
+                self.log_control('grouped count of extracted in new db: ', rows)
         except Exception as e:
             self.log_control(e)
         # stop the thread
