@@ -1,7 +1,7 @@
 # TODO:
-source /pah/to/your/virtualenv/bin/activate
+source /path/to/your/virtualenv/bin/activate
 #/home/guest0/program_self_guest/LLM/UUproject/scrip/VisProcess.sh
-## print a  long linr
+## print a long line
 echo "=====================================================================================================" >>  path/to/manage.log
 date >> path/to/manage.log
 python SQLtest.py >> path/to/manage.log

@@ -51,12 +51,12 @@ class Demo(WebsitePage):
         
     def extract_text(self, dir):
         '''
-        extract text from novel page
+        Extract text from the page.
         '''
         ## extract all paragraphs from soup
         try:
             # TODO: change this to your own method to extract text
-            ### get all class you want and extract all detail
+            ### get the elements you need and extract the details
 
             pass
             # content = self.soup.find('div', class_='contentbox')
@@ -96,7 +96,7 @@ class Demo(WebsitePage):
             links = [i for i in links if i]
 
 
-            # TODO: change this to your own method to fiilter out links you don't want
+            # TODO: change this to your own method to filter out links you don't want
             # e.g. remove links that don't start with 'http' 
             # e.g. remove links that don't contain 'wiki'
             # e.g. remove links that contain 'login'
@@ -106,7 +106,7 @@ class Demo(WebsitePage):
             links = list(set(links))
             # remove all links not start with http 
             links = [i for i in links if i.startswith('http')]
-            # remocelen > 86
+            # keep wiki links for the demo
             links = [i for i in links if 'wiki'  in i]
             if dir:
                 self.link_pth = os.path.join(dir, str(self.title+'__'+self.uniqued_id) + '.link').strip()
@@ -123,7 +123,7 @@ class Demo(WebsitePage):
         worker function for multithreading
         '''
         self.extract_text(self.dir)
-        # extrac save html in **kwargs
+        # save HTML if requested in **kwargs
         if 'save_html' in kwargs:
             if kwargs['save_html']:
                 self.save_html(self.dir)
@@ -145,7 +145,7 @@ def parse_args(argv=None):
 
 
 def main(argv=None):
-    # recorder driver init time
+    # record driver init time
     if argv is None:
         argv = sys.argv[1:]
     args = parse_args(argv)
@@ -179,8 +179,8 @@ def main(argv=None):
     else:
         controller.loop(args.rounds,args.batch,data={'save_html':True},wait_time=args.wait_time,randomize=False)
     # print('loop time: ', time.time() - init_time)
-    # toatl_size, total_len = controller.analy_dir()
-    # print('total size: ', toatl_size)
+    # total_size, total_len = controller.analy_dir()
+    # print('total size: ', total_size)
     # print('total len: ', total_len)
 
 

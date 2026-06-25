@@ -19,7 +19,7 @@ import time
 csv.field_size_limit(131072*2)  # Set the field size limit to a larger value, e.g., 1 MB (1048576 bytes)
 def setup():
     '''
-    return selenium fire fox headless
+    Return a headless Selenium Firefox driver.
     
     '''
     from selenium import webdriver
@@ -38,7 +38,7 @@ import re
 def extract_chinese(inputstring):
 
     '''
-    extract chinese word from html and keep emojis and punctuation marks
+    Extract Chinese text from HTML while keeping emojis and punctuation marks.
 
     '''
     inputstring = str(inputstring)
@@ -109,8 +109,8 @@ class PageInterface(ABC):
         
         Args:
         - **kwargs: keyword arguments that can be used by the subclass to define the worker function.
-            usually, the keyword arguments are used to pass the parameters of the worker function.
-            it will get by looper and pass to worker_func
+            Usually, the keyword arguments pass parameters to the worker function.
+            They are collected by the loop and passed to worker_func.
         
         Returns:
         - A tuple containing the results of the worker function.
@@ -187,11 +187,11 @@ class WebsitePage(PageInterface):
         self.islogging = True if loggingfile != '' else False
         self.id = id
         if tiitle == '':
-            ## extract title from html bt beautifulsoup
+            ## extract title from HTML with BeautifulSoup
             self.title = self.soup.title.string
             ## remove all html / txt / jpg in title
             self.title = self.title.replace('.html','').replace('.txt','').replace('.jpg','')
-            # remove space /n all space eement
+            # remove newlines, tabs, and surrounding spaces
             self.title = self.title.strip()
             self.title = self.title.replace('\n','')
             self.title = self.title.replace('\t','')
@@ -200,11 +200,11 @@ class WebsitePage(PageInterface):
         else:
             self.title = tiitle
 
-        ## init a unique id for titelname using 20 digits hash
+        ## initialize a unique ID for the title using a 20-digit hash
         
         self.uniqued_id = str(hashlib.sha1(self.title.encode('utf-8')).hexdigest()[:20])
     def log_control(self,x,*args,**kwargs):
-    ## fromat string linke print 
+    ## format a string like print
         x = str(x)
         x += ' '.join([str(i) for i in args]).replace('\n','')
         if 'end' in kwargs:
@@ -332,7 +332,7 @@ class Controller:
 
     """
     def log_control(self,x,*args,**kwargs):
-        ## fromat string linke print 
+        ## format a string like print
         x = str(x)
         x += ' '.join([str(i) for i in args]).replace('\n','')
         if 'end' in kwargs:
@@ -384,7 +384,7 @@ class Controller:
                 for link in link_t_be_added:
                     f.write(link+', ,F, , , \n')
         if use_db:
-            ## check if db exit , if not create it and migrate link.csv to db
+            ## check if db exists; if not, create it and migrate link.csv to db
             if not os.path.isfile(self.db_path) or os.path.getsize(self.db_path) == 0:
                 self.log_control('create db as cannot find it!')
                 self.db_conn = sqlite3.connect(self.db_path)
@@ -594,7 +594,7 @@ class Controller:
                     #     self.log_control('time used per link: ', (finish_time - start_W_time)/len(link))
                     # else:
                     #     self.log_control('time used per link: ', 0)
-                    self.log_control(f'update link db , insertd link W from  id: {id} len {len(link)}')
+                    self.log_control(f'update link db, inserted link W from id: {id} len {len(link)}')
                     total_line += len(link)
                     #total_write_time += (finish_time - start_W_time)
                 else:
@@ -647,7 +647,7 @@ class Controller:
             for f in filenames:
                 fp = os.path.join(dirpath, f)
                 total_size += os.path.getsize(fp)
-        # analy total len of *.txt
+        # analyze total length of *.txt files
         total_len = 0
         for dirpath, dirnames, filenames in os.walk(self.dir):
             for f in filenames:
@@ -670,7 +670,7 @@ class Controller:
         - randomize (bool): Whether to scrape URLs in random order.
         - data (dict): The data to pass to the worker function.
         '''
-        ## pring gouped count of extrcted
+        ## print grouped count of extracted rows
     
         group_sql = '''SELECT extracted, COUNT(*) FROM links GROUP BY extracted'''
         if self.use_db:
@@ -684,7 +684,7 @@ class Controller:
 
             input_queue = queue.Queue()
             output_queue = queue.Queue()
-            # strart worker
+            # start worker
             thread_list = []
             for i in range(self.thread_limit):
                 thread_list.append(threading.Thread(target=self.worker, args=(input_queue, output_queue), kwargs={"wdata": data}))
