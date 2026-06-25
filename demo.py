@@ -45,7 +45,6 @@ class Demo(WebsitePage):
     worker_func(**kwargs)
         A worker function for multithreading.
     """
-class Demo(WebsitePage):
     def __init__(self, htm, url, tiitle='' , dir='',loggingfile='',id=None):
         super().__init__(htm, url, tiitle, dir,loggingfile=loggingfile,id=id)
         self.links = []
