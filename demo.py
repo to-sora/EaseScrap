@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+import argparse
 import os
 import re
 import sys
@@ -133,16 +134,22 @@ class Demo(WebsitePage):
     
 
 
-def main():
-    # recorder driver init time
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(description='Run the EaseScrap demo crawler.')
+    parser.add_argument('rounds', nargs='?', type=int, default=4,
+                        help='number of crawl rounds (default: 4)')
+    parser.add_argument('batch', nargs='?', type=int, default=10,
+                        help='number of URLs per round (default: 10)')
+    return parser.parse_args(argv)
 
-    args = sys.argv
-    usearg=False
-    if len(args) == 3:
-        v1 = args[1]
-        v2 = args[2]
-        usearg=True
-    
+
+def main(argv=None):
+    # recorder driver init time
+    if argv is None:
+        argv = sys.argv[1:]
+    args = parse_args(argv)
+    usearg = bool(argv)
+    print('start')
     
     init_time = time.time()
     driver = setup()
@@ -162,11 +169,11 @@ def main():
     init_time = time.time()
 
     if usearg:
-        print('v1: ', v1)
-        print('v2: ', v2)
-        controller.loop(int(v1),int(v2),data={'save_html':False},wait_time=1,randomize=False)
+        print('v1: ', args.rounds)
+        print('v2: ', args.batch)
+        controller.loop(args.rounds,args.batch,data={'save_html':False},wait_time=1,randomize=False)
     else:
-        controller.loop(4,10,data={'save_html':True},wait_time=1,randomize=False)
+        controller.loop(args.rounds,args.batch,data={'save_html':True},wait_time=1,randomize=False)
     # print('loop time: ', time.time() - init_time)
     # toatl_size, total_len = controller.analy_dir()
     # print('total size: ', toatl_size)
@@ -175,6 +182,8 @@ def main():
 
     driver.close()
     driver.quit()
-print('start')           
-main()
+
+
+if __name__ == '__main__':
+    main()
     
