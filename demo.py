@@ -159,12 +159,14 @@ def main(argv=None):
 
     # TODO: change this to your own url
     init_url = 'https://zh.wikipedia.org/zh-hk/Wiki'
+    output_dir = 'scrapped'
+    os.makedirs(output_dir, exist_ok=True)
 
 
-    controller = Controller(init_url, 'scrapped/'                # TODO: <--- change this to your own directory
+    controller = Controller(init_url, output_dir                # TODO: <--- change this to your own directory
                             ,thread_limit=3,driver=driver,page_class=Demo
-                            ,loggingfile='scrapped/log.txt',     # <--- change this to your own directory
-                            use_db=True,db_path='scrapped/scrapped.db')  # <--- change this to your own directory
+                            ,loggingfile=os.path.join(output_dir, 'log.txt'),     # <--- change this to your own directory
+                            use_db=True,db_path=os.path.join(output_dir, 'scrapped.db'))  # <--- change this to your own directory
     time.sleep(1)
     #assert False
     init_time = time.time()

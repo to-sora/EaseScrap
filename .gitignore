@@ -1,4 +1,6 @@
-scrapped
+scrapped/*
+!scrapped/
+!scrapped/.gitkeep
 *.log
 __pycache__
 SQLtest.py

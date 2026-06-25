@@ -19,7 +19,7 @@ Current there is no package provide, user can start from demo.py
 
 1. Modify the path in `script` to point to the correct file location of .db .log 
 2. Run the script using `python demo.py` with or without args
-3. The output will be saved in dir and log and db 
+3. The demo writes output, log, and database files into `scrapped/` by default. The directory is included with a placeholder; generated files inside it are ignored by git.
 
 
 ## Modifying the demo.py to your target web
