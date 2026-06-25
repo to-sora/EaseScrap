@@ -25,11 +25,10 @@ Current there is no package provide, user can start from demo.py
 ## Modifying the demo.py to your target web
 
 1. Modify the TODO list as needed in demo.py (refering to the url, dir .etc)
-2. Save the file and run `python demo.py arg1 arg2 arg3` to see the updated list.
-<br>    arg1     : number of round <br>   arg2     : page per round <br>   arg3     : time interval
+2. Save the file and run `python demo.py [rounds] [batch] [wait_time]` to see the updated list.
+<br>    rounds     : number of rounds, default `4` <br>   batch     : pages per round, default `10` <br>   wait_time     : seconds between page loads, default `1.0`
 
 
 
 ## Working in batch
 Make use of .sh in script directory to run job in background and in batch by `nohup`
-

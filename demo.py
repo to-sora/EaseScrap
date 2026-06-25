@@ -140,6 +140,8 @@ def parse_args(argv=None):
                         help='number of crawl rounds (default: 4)')
     parser.add_argument('batch', nargs='?', type=int, default=10,
                         help='number of URLs per round (default: 10)')
+    parser.add_argument('wait_time', nargs='?', type=float, default=1.0,
+                        help='seconds to wait between page loads (default: 1.0)')
     return parser.parse_args(argv)
 
 
@@ -171,9 +173,10 @@ def main(argv=None):
     if usearg:
         print('v1: ', args.rounds)
         print('v2: ', args.batch)
-        controller.loop(args.rounds,args.batch,data={'save_html':False},wait_time=1,randomize=False)
+        print('v3: ', args.wait_time)
+        controller.loop(args.rounds,args.batch,data={'save_html':False},wait_time=args.wait_time,randomize=False)
     else:
-        controller.loop(args.rounds,args.batch,data={'save_html':True},wait_time=1,randomize=False)
+        controller.loop(args.rounds,args.batch,data={'save_html':True},wait_time=args.wait_time,randomize=False)
     # print('loop time: ', time.time() - init_time)
     # toatl_size, total_len = controller.analy_dir()
     # print('total size: ', toatl_size)
