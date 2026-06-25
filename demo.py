@@ -107,7 +107,7 @@ class Demo(WebsitePage):
             # remove all links not start with http 
             links = [i for i in links if i.startswith('http')]
             # remocelen > 86
-            link = [i for i in links if 'wiki'  in i]
+            links = [i for i in links if 'wiki'  in i]
             if dir:
                 self.link_pth = os.path.join(dir, str(self.title+'__'+self.uniqued_id) + '.link').strip()
                 with open(self.link_pth, 'w') as f:
