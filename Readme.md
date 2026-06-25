@@ -19,7 +19,7 @@ Currently, no package is provided. Start from `demo.py`.
 
 1. Modify the paths in the script to point to the correct `.db` and `.log` locations.
 2. Run the script using `python demo.py` with or without arguments.
-3. The demo writes output, log, and database files into `scrapped/` by default. The directory is included with a placeholder; generated files inside it are ignored by git.
+3. The demo writes output, log, and database files into `scraped/` by default. The directory is included with a placeholder; generated files inside it are ignored by git.
 
 
 ## Modifying the demo.py to your target web

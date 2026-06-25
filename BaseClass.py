@@ -80,7 +80,7 @@ class PageInterface(ABC):
         A worker function that performs a specific task on the web page and returns the result as a tuple.
     """
     @abstractmethod
-    def __init__(self, htm:str, url:str, tiitle='' , dir='',loger= None):
+    def __init__(self, htm:str, url:str, title='' , dir='',logger= None):
         pass
     @abstractmethod
     def get_title(self) -> str:
@@ -138,15 +138,15 @@ class WebsitePage(PageInterface):
         A BeautifulSoup object representing the parsed HTML content.
     text : str
         The extracted text content of the page.
-    extracted_pth : str
+    extracted_path : str
         The path where the extracted text content is saved.
-    orginal_path : str
+    original_path : str
         The path where the original HTML content is saved.
     extracted : bool
         A flag indicating whether the text content has been extracted.
     dir : str
         The directory where the HTML and text content will be saved.
-    uniqued_id : str
+    unique_id : str
         A unique ID generated from the title of the page.
 
     Methods:
@@ -160,7 +160,7 @@ class WebsitePage(PageInterface):
     get_state() -> dict:
         Returns a dictionary containing the state of the object.
     """
-    def __init__(self, htm, url, tiitle='', dir='',loggingfile= None,id=None):
+    def __init__(self, htm, url, title='', dir='',loggingfile= None,id=None):
         """
         Initializes a new instance of the WebsitePage class.
 
@@ -170,7 +170,7 @@ class WebsitePage(PageInterface):
             The HTML content of the page.
         url : str
             The URL of the page.
-        tiitle : str, optional
+        title : str, optional
             The title of the page. If not provided, it will be extracted from the HTML content.
         dir : str, optional
             The directory where the HTML and text content will be saved.
@@ -179,14 +179,14 @@ class WebsitePage(PageInterface):
         self.url = url
         self.soup = BeautifulSoup(self.html, 'html.parser')
         self.text = ''
-        self.extracted_pth = ''
-        self.orginal_path = ''
+        self.extracted_path = ''
+        self.original_path = ''
         self.extracted = False
         self.dir = dir
         self.loggingfile = loggingfile
         self.islogging = True if loggingfile != '' else False
         self.id = id
-        if tiitle == '':
+        if title == '':
             ## extract title from HTML with BeautifulSoup
             self.title = self.soup.title.string
             ## remove all html / txt / jpg in title
@@ -198,11 +198,11 @@ class WebsitePage(PageInterface):
             ## remove invalid char for file name in Ubuntu and Windows
             self.title = re.sub(r'[\\/:*?"<>|]', '', self.title)
         else:
-            self.title = tiitle
+            self.title = title
 
         ## initialize a unique ID for the title using a 20-digit hash
         
-        self.uniqued_id = str(hashlib.sha1(self.title.encode('utf-8')).hexdigest()[:20])
+        self.unique_id = str(hashlib.sha1(self.title.encode('utf-8')).hexdigest()[:20])
     def log_control(self,x,*args,**kwargs):
     ## format a string like print
         x = str(x)
@@ -238,8 +238,8 @@ class WebsitePage(PageInterface):
             The directory where the HTML content will be saved.
         """
         try:
-            self.orginal_path = os.path.join(dir, str(self.title+'__'+self.uniqued_id) + '.html').strip().replace(' ', '')
-            with open(self.orginal_path, 'w') as f:
+            self.original_path = os.path.join(dir, str(self.title+'__'+self.unique_id) + '.html').strip().replace(' ', '')
+            with open(self.original_path, 'w') as f:
                 f.write(self.html)
         except Exception as e:
             self.log_control(e)
@@ -256,8 +256,8 @@ class WebsitePage(PageInterface):
         """
         try:
             self.text = self.soup.get_text()
-            self.extracted_pth = os.path.join(dir, str(self.title+'__'+self.uniqued_id) + '.txt').strip().replace(' ', '')
-            with open(self.extracted_pth, 'w') as f:
+            self.extracted_path = os.path.join(dir, str(self.title+'__'+self.unique_id) + '.txt').strip().replace(' ', '')
+            with open(self.extracted_path, 'w') as f:
                 f.write(self.text)
             self.extracted = True
         except Exception as e:
@@ -280,9 +280,9 @@ class WebsitePage(PageInterface):
                 "url": self.url,
                 "title": self.title,
                 "extracted": self.extracted,
-                "extracted_pth": self.extracted_pth,
-                "orginal_path": self.orginal_path,
-                "uniqued_id": self.uniqued_id
+                "extracted_path": self.extracted_path,
+                "original_path": self.original_path,
+                "unique_id": self.unique_id
             }
         else:
             return {
@@ -290,9 +290,9 @@ class WebsitePage(PageInterface):
                 "url": self.url,
                 "title": self.title,
                 "extracted": self.extracted,
-                "extracted_pth": self.extracted_pth,
-                "orginal_path": self.orginal_path,
-                "uniqued_id": self.uniqued_id
+                "extracted_path": self.extracted_path,
+                "original_path": self.original_path,
+                "unique_id": self.unique_id
             }
         
 
@@ -325,7 +325,7 @@ class Controller:
         The worker function for multithreading.
     - update_linkcsv(self, output_queue):
         The thread worker for updating the link CSV file.
-    - analy_dir(self):
+    - analyze_dir(self):
         Analyzes the total size and length of text files in the directory.
     - loop(self, no_target=2, batch=10, randomize=False, data={}):
         The main loop for the Controller object.
@@ -371,7 +371,7 @@ class Controller:
         if not os.path.isfile(self.link_csv):
             with open(self.link_csv, 'w') as f:
                 self.log_control('create link.csv as cannot find it!')
-                f.write('url,title,extracted,extracted_pth,orginal_path,uniqued_id\n')
+                f.write('url,title,extracted,extracted_path,original_path,unique_id\n')
                 ### visit init url
                 driver.get(self.init_url)
                 driver.implicitly_wait(0.5)
@@ -379,9 +379,9 @@ class Controller:
                 
                 novel_page = self.page_class(html, self.init_url,loggingfile=self.loggingfile)
                 novel_page.save_html(self.dir)
-                link_t_be_added = novel_page.extract_links()
-                #print(link_t_be_added)
-                for link in link_t_be_added:
+                links_to_add = novel_page.extract_links()
+                #print(links_to_add)
+                for link in links_to_add:
                     f.write(link+', ,F, , , \n')
         if use_db:
             ## check if db exists; if not, create it and migrate link.csv to db
@@ -389,7 +389,7 @@ class Controller:
                 self.log_control('create db as cannot find it!')
                 self.db_conn = sqlite3.connect(self.db_path)
                 self.db_cursor = self.db_conn.cursor()
-                sql = '''CREATE TABLE links  (id INTEGER PRIMARY KEY,   url TEXT,   title TEXT,   extracted TEXT,  extracted_pth TEXT,      original_path TEXT,   unique_id TEXT)'''
+                sql = '''CREATE TABLE links  (id INTEGER PRIMARY KEY,   url TEXT,   title TEXT,   extracted TEXT,  extracted_path TEXT,      original_path TEXT,   unique_id TEXT)'''
                 self.db_cursor.execute(sql)
                 with open(self.link_csv, 'r') as f:
                     reader = csv.DictReader(f)
@@ -402,12 +402,12 @@ class Controller:
                         url = row['url']
                         title = row['title']
                         extracted = row['extracted']
-                        extracted_pth = row['extracted_pth']
-                        original_path = row['orginal_path']
-                        unique_id = row['uniqued_id']
-                        sql = '''INSERT INTO links (id, url, title, extracted, extracted_pth, original_path, unique_id)
+                        extracted_path = row['extracted_path']
+                        original_path = row['original_path']
+                        unique_id = row['unique_id']
+                        sql = '''INSERT INTO links (id, url, title, extracted, extracted_path, original_path, unique_id)
                                     VALUES (?,?,?,?,?,?,?)'''
-                        self.db_cursor.execute(sql,(index, url, title, extracted, extracted_pth, original_path, unique_id))
+                        self.db_cursor.execute(sql,(index, url, title, extracted, extracted_path, original_path, unique_id))
                         #self.log_control('migrate link.csv to db: ', index)
                     self.log_control('migrate link.csv to db: ', index)
                     #self.log_control('migrate link.csv to db time: ', time.time() - start_time)
@@ -532,7 +532,7 @@ class Controller:
             
         self.log_control('worker thread stop')
 
-    def update_linkcsv(self,output_queue,user_db=False,db_path=''):
+    def update_linkcsv(self,output_queue,use_db=False,db_path=''):
         '''
         The thread worker for updating the link CSV file.
 
@@ -541,7 +541,7 @@ class Controller:
         '''
         total_line = 0
         total_write_time = 0
-        if user_db:
+        if use_db:
             db_conn = sqlite3.connect(db_path)
             db_cursor = db_conn.cursor()
         while not self.stop.is_set():
@@ -567,8 +567,8 @@ class Controller:
                         id = db_cursor.fetchone()[0]
                     # update db by id
                     ## record time
-                    sql = '''UPDATE links SET title = ?, extracted = ?, extracted_pth = ?, original_path = ?, unique_id = ? WHERE id = ?'''
-                    db_cursor.execute(sql,(state['title'],state['extracted'],state['extracted_pth'],state['orginal_path'],state['uniqued_id'],id))
+                    sql = '''UPDATE links SET title = ?, extracted = ?, extracted_path = ?, original_path = ?, unique_id = ? WHERE id = ?'''
+                    db_cursor.execute(sql,(state['title'],state['extracted'],state['extracted_path'],state['original_path'],state['unique_id'],id))
                     db_conn.commit()
                     self.log_control("linkdb id : ", id, "updated state")
                     # insert unseen link to db
@@ -583,7 +583,7 @@ class Controller:
                     values = []
                     for i in link:
                         values.append((i,'', 'F', '', '', ''))
-                    sql = '''INSERT INTO links (url, title, extracted, extracted_pth, original_path, unique_id)
+                    sql = '''INSERT INTO links (url, title, extracted, extracted_path, original_path, unique_id)
                                 VALUES (?,?,?,?,?,?)'''
                     db_cursor.executemany(sql, values)
                     db_conn.commit()
@@ -612,7 +612,7 @@ class Controller:
                     ### insert unseen link to csv
                     for i in link:
                         if i not in [row['url'] for row in rows]:
-                            rows.append({'url': i, 'title': '', 'extracted': 'F', 'extracted_pth': '', 'orginal_path': '', 'uniqued_id': ''})
+                            rows.append({'url': i, 'title': '', 'extracted': 'F', 'extracted_path': '', 'original_path': '', 'unique_id': ''})
                     self.log_control('update link.csv: ,file W')
                     with open(self.link_csv, 'w') as f:
                         writer = csv.DictWriter(f, fieldnames=reader.fieldnames)
@@ -626,7 +626,7 @@ class Controller:
                 self.log_control('fail to update link.csv in worker2')
             output_queue.task_done()
         self.log_control('update_linkcsv thread stop')
-        if user_db:
+        if use_db:
             db_conn.close()
         self.log_control('total line: ', total_line)
         #self.log_control('total write time: ', total_write_time)
@@ -634,7 +634,7 @@ class Controller:
         #     self.log_control('time per line: ', total_write_time/total_line)
         # else:
         #     self.log_control('total line is 0')
-    def analy_dir(self):
+    def analyze_dir(self):
         '''
         Analyzes the total size and length of text files in the directory.
 
@@ -677,7 +677,7 @@ class Controller:
             self.db_conn = sqlite3.connect(self.db_path)
             self.db_cursor = self.db_conn.cursor()
             self.db_cursor.execute(group_sql)
-            orginal_rows = self.db_cursor.fetchall()
+            original_rows = self.db_cursor.fetchall()
             self.db_conn.close()
         
         try:
@@ -709,7 +709,7 @@ class Controller:
                             ## use selenium
                             self.log_control('driver getting url: ', url)
                             self.driver.get(url)
-                            self.log_control('driver geted url: ', url)
+                            self.log_control('driver got url: ', url)
 
 
                             # add to input queue
@@ -719,8 +719,8 @@ class Controller:
                             self.log_control('request get url: ', url)
                             html = requests.get(url).text
                             time.sleep(wait_time)
-                        passin = {'url': url, 'html': html,'id':id}
-                        input_queue.put(passin)
+                        payload = {'url': url, 'html': html,'id':id}
+                        input_queue.put(payload)
                         if wait_time == 0:
                             time.sleep(random.random())
                         else:
@@ -753,7 +753,7 @@ class Controller:
                             ## use selenium
                             self.log_control('driver getting url: ', url)
                             self.driver.get(url)
-                            self.log_control('driver geted url: ', url)
+                            self.log_control('driver got url: ', url)
 
 
                             # add to input queue
@@ -763,8 +763,8 @@ class Controller:
                             self.log_control('request get url: ', url)
                             html = requests.get(url).text
                             time.sleep(wait_time)
-                        passin = {'url': url, 'html': html,'id':id}
-                        input_queue.put(passin)
+                        payload = {'url': url, 'html': html,'id':id}
+                        input_queue.put(payload)
                         if wait_time == 0:
                             time.sleep(random.random())
                         else:
@@ -786,7 +786,7 @@ class Controller:
                 self.db_cursor.execute(group_sql)
                 rows = self.db_cursor.fetchall()
                 self.db_conn.close()
-                self.log_control('grouped count of extracted in old db: ', orginal_rows)
+                self.log_control('grouped count of extracted in old db: ', original_rows)
                 self.log_control('grouped count of extracted in new db: ', rows)
         except Exception as e:
             self.log_control(e)

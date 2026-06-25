@@ -29,7 +29,7 @@ class Demo(WebsitePage):
         The HTML content of the page.
     url : str
         The URL of the page.
-    tiitle : str
+    title : str
         The title of the page.
     dir : str
         The directory where the page will be saved.
@@ -45,8 +45,8 @@ class Demo(WebsitePage):
     worker_func(**kwargs)
         A worker function for multithreading.
     """
-    def __init__(self, htm, url, tiitle='' , dir='',loggingfile='',id=None):
-        super().__init__(htm, url, tiitle, dir,loggingfile=loggingfile,id=id)
+    def __init__(self, htm, url, title='' , dir='',loggingfile='',id=None):
+        super().__init__(htm, url, title, dir,loggingfile=loggingfile,id=id)
         self.links = []
         
     def extract_text(self, dir):
@@ -65,8 +65,8 @@ class Demo(WebsitePage):
             #     self.log_control(f'No content in page{self.title}')
             #     return False
             # self.log_control(content[:25].strip() + '...'+content[-25:].strip()+'| '+str(len(content)))
-            # self.extracted_pth = os.path.join(dir, str(self.title+'__'+self.uniqued_id) + '.txt').strip().replace(' ', '')
-            # with open( self.extracted_pth, 'w') as f:
+            # self.extracted_path = os.path.join(dir, str(self.title+'__'+self.unique_id) + '.txt').strip().replace(' ', '')
+            # with open( self.extracted_path, 'w') as f:
             #     f.write(content)
             self.extracted = True
         except Exception as e:
@@ -109,8 +109,8 @@ class Demo(WebsitePage):
             # keep wiki links for the demo
             links = [i for i in links if 'wiki'  in i]
             if dir:
-                self.link_pth = os.path.join(dir, str(self.title+'__'+self.uniqued_id) + '.link').strip()
-                with open(self.link_pth, 'w') as f:
+                self.link_path = os.path.join(dir, str(self.title+'__'+self.unique_id) + '.link').strip()
+                with open(self.link_path, 'w') as f:
                     for i in links:
                         f.write(i+'\n')
         except Exception as e:
@@ -159,14 +159,14 @@ def main(argv=None):
 
     # TODO: change this to your own url
     init_url = 'https://zh.wikipedia.org/zh-hk/Wiki'
-    output_dir = 'scrapped'
+    output_dir = 'scraped'
     os.makedirs(output_dir, exist_ok=True)
 
 
     controller = Controller(init_url, output_dir                # TODO: <--- change this to your own directory
                             ,thread_limit=3,driver=driver,page_class=Demo
                             ,loggingfile=os.path.join(output_dir, 'log.txt'),     # <--- change this to your own directory
-                            use_db=True,db_path=os.path.join(output_dir, 'scrapped.db'))  # <--- change this to your own directory
+                            use_db=True,db_path=os.path.join(output_dir, 'scraped.db'))  # <--- change this to your own directory
     time.sleep(1)
     #assert False
     init_time = time.time()
@@ -179,7 +179,7 @@ def main(argv=None):
     else:
         controller.loop(args.rounds,args.batch,data={'save_html':True},wait_time=args.wait_time,randomize=False)
     # print('loop time: ', time.time() - init_time)
-    # total_size, total_len = controller.analy_dir()
+    # total_size, total_len = controller.analyze_dir()
     # print('total size: ', total_size)
     # print('total len: ', total_len)
 
